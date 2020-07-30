@@ -9,20 +9,24 @@ public class EnemyGenerator : MonoBehaviour
 
     public float respawnTime = 5f;
     float nextSpawnTime = 10f;
-    public GameObject bublu;
-
+    float highestDist = 0f;
+    public GameObject[] enemies;
+    private GameObject enemyToSpawn;
     void Start()
     {
-        
+        highestDist = transform.position.x;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(Time.time > nextSpawnTime)
+        
+        if(Time.time > nextSpawnTime && transform.position.x > highestDist)
         {
-            Instantiate(bublu, transform.position, transform.rotation);
-            nextSpawnTime += respawnTime;
+            enemyToSpawn = enemies[ (int) Random.Range(0, enemies.Length) ];
+            highestDist = transform.position.x;
+            Instantiate(enemyToSpawn, transform.position, transform.rotation);
+            nextSpawnTime += Time.time + respawnTime;
         }
     }
 }

@@ -6,15 +6,15 @@ using UnityEngine.UI;
 public class statsController : MonoBehaviour
 {
     // Start is called before the first frame update
-    public float speed;
-    public float damage;
+    private float speed;
+    private float damage;
     public float maxHealth = 100f;
     private float unscaledDltTime;
     private float currentHealth;
 
-    public float highestSpeed;
-    public float highestDamage;
-    public float highestHealth;
+    private float highestSpeed;
+    private float highestDamage;
+    private float highestHealth;
 
     public float slowDownFactor = 0.025f;
     public float slowDownLength = 4f;
@@ -107,9 +107,9 @@ public class statsController : MonoBehaviour
             criticalPanel.SetActive(true);
             canSlowTime = true;
         }
-        else {
-            criticalPanel.SetActive(false);
-        }
+        //else {
+        //    criticalPanel.SetActive(false);
+        //}
 
         //we need to negotiate
         if (Input.GetKeyDown(KeyCode.N) && Time.time > nextNegotiationTime && !isNegotiating)
@@ -132,6 +132,7 @@ public class statsController : MonoBehaviour
         float touchDamage;
         if (collidedObject.CompareTag("Enemy"))
         {
+            animator.SetTrigger("hurt");
             touchDamage = collidedObject.GetComponent<EnemyStats>().touchDamage;
             currentHealth -= touchDamage;
             healthSlider.value = currentHealth;
@@ -154,7 +155,8 @@ public class statsController : MonoBehaviour
         GameObject collidedObject = collision.gameObject;
         if (collidedObject.CompareTag("EnemyBullet"))
         {
-            Debug.Log("WE HIT by" + collidedObject.name);
+            //Debug.Log("WE HIT by" + collidedObject.name);
+            animator.SetTrigger("hurt");
             currentHealth -= 2f;
             if (currentHealth <= 0)
             {
@@ -175,15 +177,18 @@ public class statsController : MonoBehaviour
         {
             animator.SetTrigger("collect");
             if (collidedObject.name.Equals("speedDrop")) {
-                speed += highestSpeed / 8f;
+                StartCoroutine(HighlightUI(speedSlider));
+                speed += highestSpeed / 6f;
             }
             if (collidedObject.name.Equals("healthDrop"))
             {
+                StartCoroutine(HighlightUI(healthSlider));
                 currentHealth += maxHealth / 4f;
             }
             if (collidedObject.name.Equals("damageDrop"))
             {
-                damage += highestDamage / 8f;
+               StartCoroutine(HighlightUI(damageSlider));
+               damage += highestDamage / 8f;
                 if(damage>highestDamage) 
                     highestDamage = damage;
 
@@ -192,8 +197,9 @@ public class statsController : MonoBehaviour
             }
             if (collidedObject.name.Equals("maxHealthDrop"))
             {
-                maxHealth += highestHealth / 8f;
-                currentHealth += highestHealth / 8f;
+                StartCoroutine(HighlightUI(healthSlider));
+                maxHealth += highestHealth / 4f;
+                currentHealth += highestHealth / 4f;
                 if (maxHealth > highestHealth)
                     highestHealth = maxHealth;
             }
@@ -304,9 +310,9 @@ public class statsController : MonoBehaviour
         damage = Mathf.Clamp(damage, 1, 999f);
 
         distanceText.GetComponent<Text>().text = "Distance : " + transform.position.x.ToString("0");
-        healthText.GetComponent<Text>().text = "Health : " + currentHealth.ToString("0") + " / " + maxHealth.ToString("0");
-        speedText.GetComponent<Text>().text = "Speed : " + speed.ToString("0");
-        damageText.GetComponent<Text>().text = "Damage : " + damage.ToString("0");
+        healthText.GetComponent<Text>().text = "Health : " +  Mathf.CeilToInt(currentHealth).ToString("0") + " / " + Mathf.CeilToInt(maxHealth).ToString("0");
+        speedText.GetComponent<Text>().text = "Speed : " + Mathf.CeilToInt(speed).ToString("0");
+        damageText.GetComponent<Text>().text = "Damage : " + Mathf.CeilToInt(damage).ToString("0");
 
     }
 
@@ -315,7 +321,9 @@ public class statsController : MonoBehaviour
 
         //respawn at the start
         transform.position = RespawnPoint.position;
-        currentHealth += maxHealth * 0.2f;
+        currentHealth += maxHealth;
+        damage = highestDamage;
+        speed = highestSpeed;
 
         animator.SetBool("isDead", false);
     }
@@ -330,6 +338,24 @@ public class statsController : MonoBehaviour
     {
         Gizmos.color = Color.gray;
         Gizmos.DrawWireSphere(transform.position, negotiateRadius);
+    }
+
+
+    IEnumerator HighlightUI(Slider slider)
+    {
+        //do the animation x times
+        for(int i = 0; i < 2; i++)
+        {
+            while (slider.transform.localScale.y < 1.70f) {
+                slider.transform.localScale = new Vector3(slider.transform.localScale.x, slider.transform.localScale.y + 0.01f, slider.transform.localScale.z);
+                yield return null;
+            }
+            while (slider.transform.localScale.y > 1f)
+            {
+                slider.transform.localScale = new Vector3(slider.transform.localScale.x, slider.transform.localScale.y - 0.01f, slider.transform.localScale.z);
+                yield return null;
+            }
+        }
     }
 
 

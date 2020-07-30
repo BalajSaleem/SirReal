@@ -16,6 +16,7 @@ public class Player_Controller : MonoBehaviour
     public float shotForce = 100f;
     public float jumpForce = 200f;
 
+    private float initialScaleX = 1.2f;
 
     Vector2 bulletDirection;
 
@@ -30,14 +31,38 @@ public class Player_Controller : MonoBehaviour
     public LayerMask enemyLayers;
     public LayerMask groundLayer;
 
+
+    ParticleSystem bloodParticles;
+
+    public GameObject particlePrefab;
+
+    public GameObject projectileBase;
+    public GameObject[] shownProjectiles; 
+
+
+    public int totalProjectiles = 4;
+    public int currentProjectiles;
+    public int projectileCooldown = 3;
+    private float projectileRespawnTime = 0f;
+
+
+
+
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         collider = GetComponent<Collider2D>();
+        initialScaleX = transform.localScale.x;
+        bloodParticles = particlePrefab.GetComponent<ParticleSystem>();
 
-        //stat = GetComponent<statsController>();
+        currentProjectiles = totalProjectiles;
+        //shownProjectiles = new GameObject[totalProjectiles];
 
+        //Setup projectiles
+        SetupProjectiles(); 
+        
     }
 
     // Update is called once per frame
@@ -45,9 +70,10 @@ public class Player_Controller : MonoBehaviour
     {
         animator.SetFloat("speed", Mathf.Abs(Input.GetAxisRaw("Horizontal")));
 
+
         if (Input.GetKey(KeyCode.D))
         {
-            if (transform.localScale.x != -1)
+            if (transform.localScale.x != 1 * initialScaleX)
             {
                 Flip();
             }
@@ -55,7 +81,7 @@ public class Player_Controller : MonoBehaviour
         }
         if (Input.GetKey(KeyCode.A))
         {
-            if (transform.localScale.x != 1)
+            if (transform.localScale.x != -1 * initialScaleX)
             {
                 Flip();
             }
@@ -83,12 +109,30 @@ public class Player_Controller : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.L))
         {//shoot the bullet
-            Shoot();
+
+            if (currentProjectiles > 0) {
+                Shoot();
+                currentProjectiles--;
+                SetupProjectiles();
+                projectileRespawnTime = Time.time + projectileCooldown;
+            }  
         }
+
+        if (currentProjectiles < totalProjectiles && Time.time > projectileRespawnTime)
+        {
+            currentProjectiles++;
+            SetupProjectiles();
+            projectileRespawnTime = Time.time + projectileCooldown;
+        }
+
     }
     void Flip()
     {
-        transform.localScale = new Vector3(transform.localScale.x * -1, 1, 1);
+        transform.localScale = new Vector3(transform.localScale.x * -1, transform.localScale.y, transform.localScale.z);
+        bullet.transform.localScale = new Vector3(bullet.transform.localScale.x * -1, bullet.transform.localScale.y, bullet.transform.localScale.z);
+
+        //transform.Rotate(0, 180, 0);
+
         flipped = !flipped;
     }
 
@@ -125,9 +169,10 @@ public class Player_Controller : MonoBehaviour
         else
             bulletDirection = Vector2.right;
         copy = Instantiate(bullet, transform.position, transform.rotation);
-        copy.transform.localScale = new Vector3(transform.localScale.x * -1, 1, 1);
-        copy.GetComponent<SpriteRenderer>().enabled = true;
-        copy.GetComponent<Collider2D>().enabled = true;
+        //copy.transform.localScale = new Vector3(transform.localScale.x * -1, bullet.transform.localScale.y, bullet.transform.localScale.z);
+        //copy.GetComponent<SpriteRenderer>().enabled = true;
+        //copy.GetComponent<Collider2D>().enabled = true;
+        copy.SetActive(true);
         copy.GetComponent<Rigidbody2D>().AddForce(bulletDirection * shotForce); //add force
         
 
@@ -141,12 +186,26 @@ public class Player_Controller : MonoBehaviour
             {
                 enemy.GetComponent<Enemy_Behaviour>().GetHurt(hurtValue); //add various damages here
                 Debug.Log("We attacked:" + enemy.name);
+                bloodParticles.Play();
             }
         }
+
 
         
     }
 
+
+    private void SetupProjectiles()
+    {
+
+        for (int i = 0; i < currentProjectiles; i++) {
+            shownProjectiles[i].SetActive(true);
+        }
+        for (int j = currentProjectiles; j < totalProjectiles; j++) {
+            shownProjectiles[j].SetActive(false);
+        }
+
+    }
 
 
     private bool IsGrounded() {

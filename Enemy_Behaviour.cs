@@ -1,24 +1,25 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+
 
 public class Enemy_Behaviour : MonoBehaviour
 {
 
     public float currentHealth = 100f;
-    public float attackRate =  0.3f;
     public float shotForce = 20f;
-    float nextAttackTime = 0f;
-    float followSpeed = 3f;
     public GameObject bullet;
-    public float searchRadius = 7f;
     public bool shooter = false;
 
-
+    public Transform shootPoint;
     bool isHurt = false;
 
-
+    public Slider healthSlider;
     public GameObject[] items;
+    public int[] dropRates;
+
+    public int dropAmount = 1;
 
     //FOR DEBUG
     //public GameObject RespawnPoint ;
@@ -30,9 +31,14 @@ public class Enemy_Behaviour : MonoBehaviour
     Vector2 bulletDirection;
 
     Animator animator;
+    EnemyStats stats;
 
     void Start()
     {
+        stats = GetComponent<EnemyStats>();
+        currentHealth = stats.maxHealth;
+        healthSlider.maxValue = currentHealth;
+        healthSlider.value = currentHealth;
         animator = GetComponent<Animator>();
         playerPos = GameObject.FindGameObjectWithTag("Player").transform;
     }
@@ -40,110 +46,86 @@ public class Enemy_Behaviour : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (isHurt && Time.time >= nextAttackTime && shooter && Vector2.Distance(transform.position, playerPos.position) > searchRadius)
-        {
-
-            Shoot();
-            nextAttackTime = nextAttackTime + (1f / attackRate);
-        }
-
 
     }
 
-    public void GetHurt(float hurtValue) {
-        
+    public void GetHurt(float hurtValue)
+    {
+
         currentHealth -= hurtValue;
+        healthSlider.value = currentHealth;
         animator.SetTrigger("hurt");
         isHurt = true;
-        if ( currentHealth <= 0f )
+        if (currentHealth <= 0f)
         {
             Die();
-        }                                     // 
-        else if (Time.time >= nextAttackTime && shooter && Vector2.Distance(transform.position, playerPos.position) > searchRadius)
-        {
-            Shoot();
-            nextAttackTime = nextAttackTime + (1f / attackRate);
         }
-
     }
 
-    public void Die() {
-
-        //Leave a copy at respwan point THIS WILL BE CHANGED
-        //Instantiate(anotherBublu, RespawnPoint.transform.position, transform.rotation);
+    public void Die()
+    {
 
         animator.SetBool("isDead", true);
         GetComponent<Collider2D>().enabled = false;
         GetComponent<Rigidbody2D>().AddForce(Vector2.up * 1000f);
         DropItems();
         //kill the object after 5s
-        Invoke("Kill", 6);
+        Destroy(transform.gameObject, 6f);
 
         //this.enabled = false;
     }
 
-    void Shoot() {
+    public void Shoot()
+    {
         animator.SetBool("shoot", true);
 
-        if (playerPos.position.x < transform.position.x)
-            bulletDirection = Vector2.left;
-        else
-            bulletDirection = Vector2.right;
+        bulletDirection = (playerPos.transform.position - bullet.transform.position).normalized;
 
         GameObject copy;
-        copy = Instantiate(bullet, transform.position, transform.rotation);
-        copy.GetComponent<SpriteRenderer>().enabled = true;
-        copy.GetComponent<Collider2D>().enabled = true;
-        copy.GetComponent<Rigidbody2D>().AddForce(bulletDirection * shotForce); //add force
-        
-
-    }
-
-    void DropItems() {
-
-        Debug.Log("Droping");
-
-        //roll a counter
-        int dropCounter = Random.Range(0, 100);
-
-        if (dropCounter > 90) {                                         //10%
-            items[0].SetActive(true);
-            items[0].GetComponent<Collider2D>().enabled = true;
-            items[0].GetComponent<Rigidbody2D>().isKinematic = false;
-            items[0].transform.parent = null;
-            //drop the maxHealth 
-        }
-        else if (dropCounter < 80 && dropCounter > 40)                 //40%
-        {
-            items[1].SetActive(true);
-            items[1].GetComponent<Collider2D>().enabled = true;
-            items[1].GetComponent<Rigidbody2D>().isKinematic = false;
-            items[1].transform.parent = null;
-            //drop health
-        }
-        else if (dropCounter < 40 && dropCounter > 20)                  //20%
-        {
-            items[2].SetActive(true);
-            items[2].GetComponent<Collider2D>().enabled = true;
-            items[2].GetComponent<Rigidbody2D>().isKinematic = false;
-            items[2].transform.parent = null;
-            //drop the damage potion
-        }
-        else
-        {
-            items[3].SetActive(true);                                   //20%
-            items[3].GetComponent<Collider2D>().enabled = true;
-            items[3].GetComponent<Rigidbody2D>().isKinematic = false;
-            items[3].transform.parent = null;
-            //drop the speed potion
-        }
+        copy = Instantiate(bullet, shootPoint.transform.position, transform.rotation);
+        //copy.GetComponent<SpriteRenderer>().enabled = true;
+        //copy.GetComponent<Collider2D>().enabled = true;
+        copy.SetActive(true);
+        copy.GetComponent<Rigidbody2D>().velocity = bulletDirection * shotForce;
+        //copy.GetComponent<Rigidbody2D>().AddForce(bulletDirection * shotForce); //add force
 
 
     }
 
-    void Kill()
+    void DropItems()
     {
-        Destroy(transform.gameObject);
+        int dropCounter;
+        int rangeStart;
+        int rangeEnd;
+
+
+        //drop X ammount of times
+        for (int k = 0; k < dropAmount; k++)
+        {
+            //roll a counter
+            dropCounter = Random.Range(0, 100);
+
+            rangeStart = 0;
+            rangeEnd = 0;
+
+
+            for (int i = 0; i < dropRates.Length; i++)
+            {
+                rangeStart = rangeEnd;
+                rangeEnd = rangeStart + dropRates[i];
+                if (dropCounter >= rangeStart && dropCounter <= rangeEnd)
+                {
+                    items[i].SetActive(true);                                   //drop that item.
+                    items[i].GetComponent<Collider2D>().enabled = true;
+                    items[i].GetComponent<Rigidbody2D>().isKinematic = false;
+                    items[i].transform.parent = null;
+                    break;
+                }
+            }
+        }
+
+
     }
+
 
 }
